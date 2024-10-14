@@ -89,10 +89,10 @@ class InstallWindow(QWidget):
         layout.addWidget(self.save)
         layout.addWidget(self.error_label)
 
-        self.save.clicked.connect(self.step)
+        self.save.clicked.connect(self.save_config)
         self.setLayout(layout)
 
-    def step(self):
+    def save_config(self):
         if self.input_db_username.text() == "":
             self.error_label.setText("Please Enter Database Username")
             self.input_db_username.setFocus()

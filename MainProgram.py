@@ -12,7 +12,7 @@ class MainScreen:
         self.splash = None
         self.pix = None
 
-    def splashscreen(self):
+    def display_splash(self):
         self.pix = QPixmap("splash_screen.jpg")
         self.splash = QSplashScreen(self.pix, Qt.WindowType.WindowStaysOnTopHint)
         self.splash.show()
@@ -32,7 +32,7 @@ app = QApplication(sys.argv)
 
 login = LoginScreen()
 mainScreen = MainScreen()
-mainScreen.splashscreen()
+mainScreen.display_splash()
 installWindow = InstallWindow()
 
 if os.path.exists("./config.json"):

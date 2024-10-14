@@ -75,7 +75,8 @@ class DBOperation:
 
     def get_current_vehicle(self):
         cursor = self.mydb.cursor()
-        row_count = cursor.execute("select * from vehicles where is_exit='0'")
+        row_count = cursor.execute(
+            "select v.*, slots.id from vehicles v join slots where v.id = slots.vehicle_id and is_exit='0'")
         data = cursor.fetchall()
         cursor.close()
         return data
@@ -87,8 +88,8 @@ class DBOperation:
         cursor.close()
         return data
 
-    def add_vehicles(self, name, vehicle_no, mobile, vehicle_type):
-        space_id = self.space_available(vehicle_type)
+    def add_vehicles(self, name, vehicle_no, mobile, vehicle_type, slot_no):
+        space_id = self.space_available(vehicle_type, slot_no)
         if space_id:
             current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
             data = (name, mobile, str(current_date), '', '0', vehicle_no, str(current_date), str(current_date),
@@ -108,9 +109,9 @@ class DBOperation:
         else:
             return "No Space Available for Parking"
 
-    def space_available(self, v_type):
+    def space_available(self, v_type, slot_no):
         cursor = self.mydb.cursor()
-        cursor.execute("select * from slots where is_empty='1' and space_for='" + str(v_type) + "'")
+        cursor.execute("select * from slots where is_empty='1' and space_for='" + str(v_type) + "' and id='"+slot_no+"'")
         data = cursor.fetchall()
         cursor.close()
         if len(data) > 0:
@@ -118,23 +119,31 @@ class DBOperation:
         else:
             return False
 
+    def get_available_slots(self, v_type):
+        cursor = self.mydb.cursor()
+        cursor.execute("select id from slots where is_empty='1' and space_for='" + str(v_type) + "'")
+        data = cursor.fetchall()
+        cursor.close()
+        if len(data) > 0:
+            return [str(item[0]) for item in data]
+        else:
+            return []
+
     def check_already_booked(self, v_no):
         cursor = self.mydb.cursor()
-        cursor.execute("select * from slots s, vehicles v where v.id=s.vehicle_id "
-                       "and is_empty='0' and vehicle_no='" + str(v_no) + "'")
+        cursor.execute("select s.id from slots s, vehicles v where v.id=s.vehicle_id "
+                       "and is_exit='0' and vehicle_no='" + str(v_no) + "'")
         data = cursor.fetchall()
         cursor.close()
         if len(data) == 0:
-            return True
-        if len(data) > 0:
-            return data[0][0]
+            return -1
         else:
-            return False
+            return data[0][0]
 
     def exit_vehicle(self, vehicle_id):
         cursor = self.mydb.cursor()
         current_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        cursor.execute("UPDATE slots set is_empty='1',vehicle_id='' where vehicle_id='" + vehicle_id + "'")
+        cursor.execute("UPDATE slots set is_empty='1',vehicle_id=NULL where vehicle_id='" + vehicle_id + "'")
         self.mydb.commit()
         cursor.execute("UPDATE vehicles set is_exit='1',exit_time='" + current_date + "' where id='" + vehicle_id + "'")
         self.mydb.commit()

@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QPushButton, QLabel, QLineEdit, QHBoxLayout, QGridLayout, \
-    QTableWidget, QTableWidgetItem, QMainWindow, QFrame, QComboBox, QHeaderView
+    QTableWidget, QTableWidgetItem, QMainWindow, QFrame, QComboBox, QHeaderView, QMessageBox
 from DataBaseOperation import DBOperation
 
 # noinspection PyUnresolvedReferences
@@ -16,6 +16,8 @@ class HomeScreen(QMainWindow):
         self.table = None
         self.gridLayout = None
         self.error_label = None
+        self.vehicle_type_cbo = None
+        self.slot_no_cbo = None
         self.setWindowTitle("Easy Parking System")
 
         self.dbOperation = DBOperation()
@@ -45,7 +47,7 @@ class HomeScreen(QMainWindow):
             "white")
 
         self.btn_home.clicked.connect(self.show_home)
-        self.btn_add.clicked.connect(self.add)
+        self.btn_add.clicked.connect(self.add_layouts)
         self.btn_manage.clicked.connect(self.show_manage)
         self.btn_history.clicked.connect(self.show_history)
 
@@ -62,18 +64,18 @@ class HomeScreen(QMainWindow):
         parent_vertical = QVBoxLayout()
         parent_vertical.setContentsMargins(0, 0, 0, 0)
         self.vertical_1 = QVBoxLayout()
-        self.add_home_page_data()
+        self.add_home_layout()
 
         self.vertical_2 = QVBoxLayout()
         self.vertical_2.setContentsMargins(0, 0, 0, 0)
-        self.add_book_slot()
+        self.add_book_slot_layout()
 
         self.vertical_3 = QVBoxLayout()
         self.vertical_3.setContentsMargins(0, 0, 0, 0)
-        self.add_manage_slot()
+        self.add_manage_slot_layout()
 
         self.vertical_4 = QVBoxLayout()
-        self.add_history_page()
+        self.add_history_layout()
 
         self.frame_1 = QFrame()
         self.frame_1.setMinimumWidth(self.width())
@@ -150,7 +152,7 @@ class HomeScreen(QMainWindow):
         self.frame_3.show()
         self.refresh_manage_slot()
 
-    def add(self):
+    def add_layouts(self):
         self.btn_home.setStyleSheet(
             "width:200px;height:160px;font-size:20px;background:#A4866F;color:#fff;font-weight:bold;border:1px solid "
             "white")
@@ -200,16 +202,19 @@ class HomeScreen(QMainWindow):
         i = 0
         alldata = self.dbOperation.get_slot_space()
         for data in alldata:
-            label = QPushButton("Slot " + str(data[0]) + " \n " + str(data[1]))
+            label = QPushButton("Slot " + str(data[0]) + " \n " + str(data[2]) + " Wheeler" + "\n" + str(data[1]))
 
             if data[3] == 1:
                 label.setStyleSheet(
                     "background-color:green;color:white;padding:5px;width:100px;height:100px;"
                     "border:1px solid white;text-align:center;font-weight:bold")
+                label.clicked.connect(lambda _, slot_no=data[0], vehicle_type=str(data[2]):
+                                      self.book_slot(slot_no, vehicle_type))
             else:
                 label.setStyleSheet(
                     "background-color:red;color:white;padding:5px;width:100px;height:100px;"
                     "border:1px solid white;text-align:center;font-weight:bold")
+                # label.clicked.connect(lambda _, slot_no=data[0]: self.show_confirm_exit(slot_no))
 
             if i % 5 == 0:
                 i = 0
@@ -218,7 +223,7 @@ class HomeScreen(QMainWindow):
             self.gridLayout.addWidget(label, row, i)
             i = i + 1
 
-    def add_home_page_data(self):
+    def add_home_layout(self):
         self.vertical_1.setContentsMargins(0, 0, 0, 0)
 
         button = QPushButton("Refresh Slot")
@@ -245,16 +250,19 @@ class HomeScreen(QMainWindow):
         row = 0
         i = 0
         for data in alldata:
-            label = QPushButton("Slot " + str(data[0]) + " \n " + str(data[1]))
+            label = QPushButton("Slot " + str(data[0]) + " \n " + str(data[2]) + " Wheeler" + "\n" + str(data[1]))
 
             if data[3] == 1:
                 label.setStyleSheet(
                     "background-color:green;color:white;padding:5px;width:100px;height:100px;"
                     "border:1px solid white;text-align:center;font-weight:bold")
+                label.clicked.connect(lambda _, slot_no=data[0], vehicle_type=str(data[2]):
+                                      self.book_slot(slot_no, vehicle_type))
             else:
                 label.setStyleSheet(
                     "background-color:red;color:white;padding:5px;width:100px;height:100px;"
                     "border:1px solid white;text-align:center;font-weight:bold")
+                # label.clicked.connect(lambda _, slot_no=data[0]: self.show_confirm_exit(slot_no))
 
             if i % 5 == 0:
                 i = 0
@@ -267,21 +275,52 @@ class HomeScreen(QMainWindow):
         self.vertical_1.addWidget(frame)
         self.vertical_1.addStretch()
 
-    def add_book_slot(self):
+    def book_slot(self, slot_no, vehicle_type):
+        if vehicle_type == "2":
+            self.vehicle_type_cbo.setCurrentIndex(0)
+        else:
+            self.vehicle_type_cbo.setCurrentIndex(1)
+        if self.slot_no_cbo.findText(str(slot_no)) != -1:
+            self.slot_no_cbo.setCurrentText(str(slot_no))
+        self.add_layouts()
+
+    def show_confirm_exit(self, slot_no):
+        dlg = QMessageBox(self)
+        dlg.setWindowTitle("Exit Vehicle")
+        dlg.setText("Do you want to exit vehicle from slot " + str(slot_no) + "?")
+        dlg.setStandardButtons(
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+        )
+        dlg.setIcon(QMessageBox.Icon.Question)
+        button = dlg.exec()
+
+        if button == QMessageBox.StandardButton.Yes:
+            self.dbOperation.exit_vehicle(str(slot_no))
+            self.refresh_home()
+
+    def add_book_slot_layout(self):
         layout = QVBoxLayout()
         frame = QFrame()
 
+        vehicle_type = QLabel("Vehicle Type : ")
+        vehicle_type.setStyleSheet("color:#000;padding:8px 0px;font-size:20px")
+        slot_no_label = QLabel("Slot : ")
+        slot_no_label.setStyleSheet("color:#000;padding:8px 0px;font-size:20px")
         name_label = QLabel("Name : ")
         name_label.setStyleSheet("color:#000;padding:8px 0px;font-size:20px")
         mobile_label = QLabel("Mobile : ")
         mobile_label.setStyleSheet("color:#000;padding:8px 0px;font-size:20px")
         vehicle_label = QLabel("Vehicle No : ")
         vehicle_label.setStyleSheet("color:#000;padding:8px 0px;font-size:20px")
-        vehicle_type = QLabel("Vehicle Type : ")
-        vehicle_type.setStyleSheet("color:#000;padding:8px 0px;font-size:20px")
         self.error_label = QLabel("")
         self.error_label.setStyleSheet("color:red;padding:8px 0px;font-size:20px")
 
+        self.vehicle_type_cbo = QComboBox()
+        self.vehicle_type_cbo.setStyleSheet("padding:8px 0px;font-size:20px;border:1px solid white")
+        self.vehicle_type_cbo.addItem("2 Wheeler")
+        self.vehicle_type_cbo.addItem("4 Wheeler")
+        self.slot_no_cbo = QComboBox()
+        self.slot_no_cbo.setStyleSheet("padding:8px 0px;font-size:20px;border:1px solid white")
         name_input = QLineEdit()
         name_input.setStyleSheet("padding:8px 0px;font-size:20px")
         name_input.setMaxLength(30)
@@ -291,23 +330,21 @@ class HomeScreen(QMainWindow):
         vehicle_input = QLineEdit()
         vehicle_input.setStyleSheet("padding:8px 0px;font-size:20px")
         vehicle_input.setMaxLength(30)
-        vehicle_type_cbo = QComboBox()
-        vehicle_type_cbo.setStyleSheet("padding:8px 0px;font-size:20px;border:1px solid white")
-        vehicle_type_cbo.addItem("2 Wheeler")
-        vehicle_type_cbo.addItem("4 Wheeler")
 
         button = QPushButton("Book Slot")
         button.setStyleSheet("color:#fff;padding:8px 0px;font-size:20px;background:green;border:1px solid white")
         button.setShortcut("Enter")
 
+        layout.addWidget(vehicle_type)
+        layout.addWidget(self.vehicle_type_cbo)
+        layout.addWidget(slot_no_label)
+        layout.addWidget(self.slot_no_cbo)
         layout.addWidget(name_label)
         layout.addWidget(name_input)
         layout.addWidget(mobile_label)
         layout.addWidget(mobile_input)
         layout.addWidget(vehicle_label)
         layout.addWidget(vehicle_input)
-        layout.addWidget(vehicle_type)
-        layout.addWidget(vehicle_type_cbo)
         layout.addWidget(button)
         layout.addWidget(self.error_label)
 
@@ -320,11 +357,24 @@ class HomeScreen(QMainWindow):
         layout.addStretch()
         frame.setLayout(layout)
         button.clicked.connect(
-            lambda: self.add_vehicles(name_input, vehicle_input, mobile_input,
-                                      vehicle_type_cbo, self.error_label))
+            lambda: self.add_vehicle(name_input, vehicle_input, mobile_input, self.vehicle_type_cbo, self.slot_no_cbo,
+                                     self.error_label))
+        self.vehicle_type_cbo.currentIndexChanged.connect(lambda: self.add_available_slots(self.vehicle_type_cbo, self.slot_no_cbo))
+        self.add_available_slots(self.vehicle_type_cbo, self.slot_no_cbo)
         self.vertical_2.addWidget(frame)
 
-    def add_vehicles(self, name, vehicle, mobile, index, error_label):
+    def add_available_slots(self, vehicle_type, slot_no):
+        vtp = 2
+        if vehicle_type.currentIndex() == 0:
+            vtp = 2
+        else:
+            vtp = 4
+        data = self.dbOperation.get_available_slots(vtp)
+        slot_no.clear()
+        slot_no.addItems(data)
+        slot_no.setCurrentIndex(0)
+
+    def add_vehicle(self, name, vehicle, mobile, index, slot_no, error_label):
         if name.text() == "":
             error_label.setText("Please Enter Vehicle Name")
             name.setFocus()
@@ -340,53 +390,60 @@ class HomeScreen(QMainWindow):
             vehicle.setFocus()
             return
 
-        vtp = 2
+        vtp = "2"
         if index.currentIndex() == 0:
-            vtp = 2
+            vtp = "2"
         else:
-            vtp = 4
+            vtp = "4"
 
-        data = self.dbOperation.add_vehicles(name.text(), vehicle.text(), mobile.text(), str(vtp))
-        if data:
-            error_label.setText("Slot Booked Successfully")
-            name.setText("")
-            vehicle.setText("")
-            mobile.setText("")
-            index.setCurrentIndex(0)
+        ret_value = self.dbOperation.check_already_booked(vehicle.text())
+        if ret_value == -1:
+            data = self.dbOperation.add_vehicles(name.text(), vehicle.text(), mobile.text(), vtp, slot_no.currentText())
+            if data:
+                error_label.setText("Slot Booked Successfully")
+                name.setText("")
+                vehicle.setText("")
+                mobile.setText("")
+                index.setCurrentIndex(0)
+                self.add_available_slots(self.vehicle_type_cbo, self.slot_no_cbo)
+            else:
+                error_label.setText("Failed to Book Slot : " + str(data))
         else:
-            error_label.setText("Failed to Book Slot : " + str(data))
+            error_label.setText("Vehicle No " + vehicle.text() + " already booked in Slot " + str(ret_value))
 
-    def add_manage_slot(self):
+    def add_manage_slot_layout(self):
         data = self.dbOperation.get_current_vehicle()
         self.table = QTableWidget()
         self.table.setStyleSheet("background:#fff")
         self.table.resize(self.width(), self.height())
         self.table.setRowCount(len(data))
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(8)
 
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.ResizeToContents)
         self.table.setHorizontalHeaderItem(0, QTableWidgetItem("ID"))
-        self.table.setHorizontalHeaderItem(1, QTableWidgetItem("Name"))
-        self.table.setHorizontalHeaderItem(2, QTableWidgetItem("VEHICLE No"))
-        self.table.setHorizontalHeaderItem(3, QTableWidgetItem("MOBILE"))
-        self.table.setHorizontalHeaderItem(4, QTableWidgetItem("VEHICLE TYPE"))
-        self.table.setHorizontalHeaderItem(5, QTableWidgetItem("ENTRY TIME"))
-        self.table.setHorizontalHeaderItem(6, QTableWidgetItem("ACTION"))
+        self.table.setHorizontalHeaderItem(1, QTableWidgetItem("Slot No"))
+        self.table.setHorizontalHeaderItem(2, QTableWidgetItem("Name"))
+        self.table.setHorizontalHeaderItem(3, QTableWidgetItem("VEHICLE No"))
+        self.table.setHorizontalHeaderItem(4, QTableWidgetItem("MOBILE"))
+        self.table.setHorizontalHeaderItem(5, QTableWidgetItem("VEHICLE TYPE"))
+        self.table.setHorizontalHeaderItem(6, QTableWidgetItem("ENTRY TIME"))
+        self.table.setHorizontalHeaderItem(7, QTableWidgetItem("ACTION"))
 
         if len(data) > 0:
             loop = 0
             for smalldata in data:
                 self.table.setItem(loop, 0, QTableWidgetItem(str(smalldata[0])))
-                self.table.setItem(loop, 1, QTableWidgetItem(str(smalldata[1])))
-                self.table.setItem(loop, 2, QTableWidgetItem(str(smalldata[6])))
-                self.table.setItem(loop, 3, QTableWidgetItem(str(smalldata[2])))
-                self.table.setItem(loop, 4, QTableWidgetItem(str(smalldata[7])))
-                self.table.setItem(loop, 5, QTableWidgetItem(str(smalldata[3])))
+                self.table.setItem(loop, 1, QTableWidgetItem(str(smalldata[10])))
+                self.table.setItem(loop, 2, QTableWidgetItem(str(smalldata[1])))
+                self.table.setItem(loop, 3, QTableWidgetItem(str(smalldata[6])))
+                self.table.setItem(loop, 4, QTableWidgetItem(str(smalldata[2])))
+                self.table.setItem(loop, 5, QTableWidgetItem(str(smalldata[7])))
+                self.table.setItem(loop, 6, QTableWidgetItem(str(smalldata[3])))
                 self.button_exit = QPushButton("Exit")
                 self.button_exit.setStyleSheet(
                     "color:#fff;padding:8px 0px;font-size:20px;background:green;border:1px solid white")
-                self.table.setCellWidget(loop, 6, self.button_exit)
-                self.button_exit.clicked.connect(self.exit)
+                self.table.setCellWidget(loop, 7, self.button_exit)
+                self.button_exit.clicked.connect(self.exit_vehicle)
                 loop = loop + 1
 
         frame = QFrame()
@@ -411,20 +468,21 @@ class HomeScreen(QMainWindow):
 
     def refresh_manage_slot(self):
         data = self.dbOperation.get_current_vehicle()
-        self.table.setColumnCount(7)
+        self.table.setColumnCount(8)
         self.table.setRowCount(len(data))
         if len(data) > 0:
             loop = 0
             for smalldata in data:
                 self.table.setItem(loop, 0, QTableWidgetItem(str(smalldata[0])))
-                self.table.setItem(loop, 1, QTableWidgetItem(str(smalldata[1])))
-                self.table.setItem(loop, 2, QTableWidgetItem(str(smalldata[6])))
-                self.table.setItem(loop, 3, QTableWidgetItem(str(smalldata[2])))
-                self.table.setItem(loop, 4, QTableWidgetItem(str(smalldata[7])))
-                self.table.setItem(loop, 5, QTableWidgetItem(str(smalldata[3])))
+                self.table.setItem(loop, 1, QTableWidgetItem(str(smalldata[10])))
+                self.table.setItem(loop, 2, QTableWidgetItem(str(smalldata[1])))
+                self.table.setItem(loop, 3, QTableWidgetItem(str(smalldata[6])))
+                self.table.setItem(loop, 4, QTableWidgetItem(str(smalldata[2])))
+                self.table.setItem(loop, 5, QTableWidgetItem(str(smalldata[7])))
+                self.table.setItem(loop, 6, QTableWidgetItem(str(smalldata[3])))
                 self.button_exit = QPushButton("Exit")
-                self.table.setCellWidget(loop, 6, self.button_exit)
-                self.button_exit.clicked.connect(self.exit)
+                self.table.setCellWidget(loop, 7, self.button_exit)
+                self.button_exit.clicked.connect(self.exit_vehicle)
                 loop = loop + 1
 
     def refresh_history(self):
@@ -445,7 +503,7 @@ class HomeScreen(QMainWindow):
                 self.table1.setItem(loop, 6, QTableWidgetItem(str(smalldata[4])))
                 loop = loop + 1
 
-    def add_history_page(self):
+    def add_history_layout(self):
         data = self.dbOperation.get_all_vehicles()
         self.table1 = QTableWidget()
         self.table1.resize(self.width(), self.height())
@@ -494,7 +552,7 @@ class HomeScreen(QMainWindow):
         self.vertical_4.addWidget(self.frame5)
         self.vertical_4.addStretch()
 
-    def exit(self):
+    def exit_vehicle(self):
         sender = self.sender()
         if sender:
             row = self.table.indexAt(sender.pos()).row()

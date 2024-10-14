@@ -37,13 +37,13 @@ class LoginScreen(QWidget):
         layout.addWidget(self.error_msg)
         layout.addStretch()
         btn_login.setShortcut("Return")
-        btn_login.clicked.connect(self.homepage)
+        btn_login.clicked.connect(self.display_home)
         self.setLayout(layout)
 
     def signin(self):
         self.show()
 
-    def homepage(self):
+    def display_home(self):
         if self.input_username.text() == "":
             self.error_msg.setText("Please Enter Username")
             self.input_username.setFocus()
